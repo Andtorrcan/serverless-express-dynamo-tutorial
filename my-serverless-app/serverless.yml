@@ -1,0 +1,60 @@
+service: my-serverless-app
+frameworkVersion: '2'
+useDotenv: true
+variablesResolutionMode: 20210326
+
+plugins:
+  - serverless-dotenv-plugin
+  - serverless-localstack
+  - serverless-offline
+  - serverless-domain-manager
+
+provider:
+  lambdaHashingVersion: 20201221
+  name: aws
+  runtime: nodejs14.x
+  stage: dev
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource:
+        - { "Fn::GetAtt": ["UsersDynamoDBTable", "Arn" ] }
+
+package:
+#  include:
+#    - include-me.js
+#    - include-me-dir/**
+  exclude:
+    - node_modules/**
+#    - exclude-me-dir/**
+
+functions:
+  app:
+    handler: handler.handler 
+    events: 
+      - http: 
+          path: /{proxy+}
+          method: ANY
+          cors: true
+
+custom:
+  localstack:
+    stages:
+      - dev
+    host: http://localhost
+    edgePort: 4566
+    autostart: true
+    lambda:
+      mountCode: True
+
+  customDomain:
+    domainName: 'your-domain.com' 
+    basePath: 'users' # This will be prefixed to all routes
+    stage: ${self:provider.stage}
+    createRoute53Record: true
